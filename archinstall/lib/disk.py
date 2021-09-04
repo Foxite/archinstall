@@ -497,22 +497,22 @@ class Filesystem:
 		"""
 		return self.raw_parted(string).exit_code
 
-	def use_entire_disk(self, root_filesystem_type='ext4'):
+	def use_entire_disk(self, root_filesystem_type='ext4', efi_size='513MiB', efi_mount_point='/boot'):
 		log(f"Using and formatting the entire {self.blockdevice}.", level=logging.DEBUG)
 		if has_uefi():
-			self.add_partition('primary', start='1MiB', end='513MiB', partition_format='fat32')
+			self.add_partition('primary', start='1MiB', end=efi_size, partition_format='fat32')
 			self.set_name(0, 'EFI')
 			self.set(0, 'boot on')
 			# TODO: Probably redundant because in GPT mode 'esp on' is an alias for "boot on"?
 			# https://www.gnu.org/software/parted/manual/html_node/set.html
 			self.set(0, 'esp on')
-			self.add_partition('primary', start='513MiB', end='100%')
+			self.add_partition('primary', start=efi_size, end='100%')
 
 			self.blockdevice.partition[0].filesystem = 'vfat'
 			self.blockdevice.partition[1].filesystem = root_filesystem_type
 			log(f"Set the root partition {self.blockdevice.partition[1]} to use filesystem {root_filesystem_type}.", level=logging.DEBUG)
 
-			self.blockdevice.partition[0].target_mountpoint = '/boot'
+			self.blockdevice.partition[0].target_mountpoint = efi_mount_point
 			self.blockdevice.partition[1].target_mountpoint = '/'
 
 			self.blockdevice.partition[0].allow_formatting = True
